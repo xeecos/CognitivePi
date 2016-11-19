@@ -2,9 +2,61 @@ const fs = require('fs');
 const https = require('https');
 const querystring = require('querystring');
 const guid = require('guid');
+var mic = require('mic');
+var wav = require('node-wav');
+
+var wavBin;// = fs.readFileSync('./assets/test.wav');
+
+var micInstance = mic({ 'rate': '8000', 'channels': '1', 'debug': true, 'exitOnSilence': 6 });
+var micInputStream = micInstance.getAudioStream();
+
+var outputWavStream = fs.WriteStream('output.wav');
+micInputStream.pipe(outputWavStream);
  
-var wav = fs.readFileSync('./assets/test.wav');
-requestAuth('1267e760dd2748aa9165ae885e7d5729');
+micInputStream.on('data', function(data) {
+    console.log("Recieved Input Stream: " + data.length);
+});
+ 
+micInputStream.on('error', function(err) {
+    cosole.log("Error in Input Stream: " + err);
+});
+ 
+micInputStream.on('startComplete', function() {
+        console.log("Got SIGNAL startComplete");
+        setTimeout(function() {
+                micInstance.pause();
+            }, 5000);
+    });
+    
+micInputStream.on('stopComplete', function() {
+        console.log("Got SIGNAL stopComplete");
+	wavBin = wav.encode(outputWavStream, { sampleRate: 8000, float: true, bitDepth: 32 });
+    });
+    
+micInputStream.on('pauseComplete', function() {
+        console.log("Got SIGNAL pauseComplete");
+        setTimeout(function() {
+                micInstance.resume();
+            }, 5000);
+    });
+ 
+micInputStream.on('resumeComplete', function() {
+        console.log("Got SIGNAL resumeComplete");
+        setTimeout(function() {
+                micInstance.stop();
+            }, 5000);
+    });
+ 
+micInputStream.on('silence', function() {
+        console.log("Got SIGNAL silence");
+    });
+ 
+micInputStream.on('processExitComplete', function() {
+        console.log("Got SIGNAL processExitComplete");
+    });
+ 
+micInstance.start();
+//requestAuth('1267e760dd2748aa9165ae885e7d5729');
 
 function requestAuth(speechKey){
 	var post_options = {
@@ -67,7 +119,7 @@ function requestSpeech(authCode){
       		}
 	    });
 	});
-	speechReq.write(wav);
+	speechReq.write(wavBin);
 	speechReq.end();
 }
 				
