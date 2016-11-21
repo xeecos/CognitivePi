@@ -2,25 +2,14 @@ const fs = require('fs');
 const https = require('https');
 const querystring = require('querystring');
 const guid = require('guid');
+const MegaPi = require("megapi").MegaPi;
 var Mic = require('node-microphone');
 var mic = new Mic({bitwidth:16,rate:8000,channels:1});
 var recordVoiceStream = fs.WriteStream("./output.wav");
 
-var lastTime = new Date().getTime();
+var lastTime;
 
-var getUserMedia = require('getusermedia');
- 
-getUserMedia(function (err, stream) {
-    // if the browser doesn't support user media 
-    // or the user says "no" the error gets passed 
-    // as the first argument. 
-    if (err) {
-       console.log('failed');
-    } else {
-       console.log('got a stream', stream);  
-    }
-});
-//startRecording(3000);
+startRecording(3000);
 
 mic.on('info', (info) => {
 // 	console.log("info:",info);
@@ -29,7 +18,19 @@ mic.on('error', (error) => {
 // 	console.log("error:",error);
 });
 
+var bot = new MegaPi("/dev/ttyS0", onStart);
+
+function onStart(){
+  setTimeout(loop,500);
+}
+function loop(){
+
+  setTimeout(loop,500);
+}
+
+
 function startRecording(time){
+	lastTime = new Date().getTime();
 	var micStream = mic.startRecording();
 	micStream.pipe(recordVoiceStream);
 	setTimeout(stopRecording,time);
@@ -37,8 +38,8 @@ function startRecording(time){
 
 function stopRecording(){
 	lastTime = new Date().getTime();
-    mic.stopRecording();
-    requestAuth('1267e760dd2748aa9165ae885e7d5729');
+	mic.stopRecording();
+	requestAuth('1267e760dd2748aa9165ae885e7d5729');
 }
 function requestAuth(speechKey){
 	console.log("requestAuth");
