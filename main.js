@@ -12,11 +12,17 @@ var lastTime;
 startRecording(3000);
 
 mic.on('info', (info) => {
-// 	console.log("info:",info);
+	console.log("time:"+new Date().getTime())
+	var s = "";
+ 	for(var i=0;i<info.length;i++){
+ 		s+=" "+(info[i]);
+ 	}
+ 	console.log(s);
 });
 mic.on('error', (error) => {
 // 	console.log("error:",error);
 });
+var micStream = mic.startRecording();
 
 var bot = new MegaPi("/dev/ttyS0", onStart);
 

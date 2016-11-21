@@ -4,7 +4,8 @@
   "description": "microsoft cognitive services demo",
   "main": "main.js",
   "dependencies": {
-	"guid":"^0.0.12"
+    "guid": "^0.0.12",
+    "waveform-data": "^1.5.3"
   },
   "devDependencies": {},
   "scripts": {
