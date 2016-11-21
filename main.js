@@ -8,26 +8,20 @@ var recordVoiceStream = fs.WriteStream("./output.wav");
 
 var lastTime = new Date().getTime();
 
-var getUserMedia = require('getusermedia');
- 
-getUserMedia(function (err, stream) {
-    // if the browser doesn't support user media 
-    // or the user says "no" the error gets passed 
-    // as the first argument. 
-    if (err) {
-       console.log('failed');
-    } else {
-       console.log('got a stream', stream);  
-    }
-});
 //startRecording(3000);
 
 mic.on('info', (info) => {
-// 	console.log("info:",info);
+	console.log("time:"+new Date().getTime())
+	var s = "";
+ 	for(var i=0;i<info.length;i++){
+ 		s+=" "+(info[i]);
+ 	}
+ 	console.log(s);
 });
 mic.on('error', (error) => {
 // 	console.log("error:",error);
 });
+var micStream = mic.startRecording();
 
 function startRecording(time){
 	var micStream = mic.startRecording();
