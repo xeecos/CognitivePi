@@ -3,27 +3,60 @@ const https = require('https');
 const querystring = require('querystring');
 const guid = require('guid');
 const MegaPi = require("megapi").MegaPi;
-var Mic = require('node-microphone');
-var mic = new Mic({bitwidth:16,rate:8000,channels:1});
-var recordVoiceStream = fs.WriteStream("./output.wav");
 
-var lastTime;
-
-startRecording(3000);
-
-mic.on('info', (info) => {
-	console.log("time:"+new Date().getTime())
-	var s = "";
- 	for(var i=0;i<info.length;i++){
- 		s+=" "+(info[i]);
- 	}
- 	console.log(s);
+var mic = require('microphone');
+var apiKey = "your-bing-speech-api-key";
+var lastTime,header,isRecognizing = false,isRecording = false,list = [];
+var vol = 0;
+var outputBuffer;
+mic.startCapture();
+mic.audioStream.on('data', function(data) {
+	if(isRecognizing){
+		return;
+	}
+	if(data.length>44){
+		list.push(data);
+		if(list.length>20){
+			list.shift();
+		}
+		var l = getRMS(data);
+		if(l>0.02){
+			vol += l;
+		}else{
+			vol *= 0.5;
+		}
+		var v = Math.round(vol*100)/100;
+		if(v>0.3&&!isRecording){
+			isRecording = true;
+			setTimeout(function(){
+				isRecording = false;
+				isRecognizing = true;
+				stopRecording();
+			},1500);
+		};
+	}else{
+		header = data;
+		console.log(data.readUInt16LE(22));
+		console.log(data.readUInt32LE(24));
+	}
+	
 });
-mic.on('error', (error) => {
-// 	console.log("error:",error);
-});
-var micStream = mic.startRecording();
 
+var SHORT_NORMALIZE = (1.0/32768.0)
+function getRMS(buffer){
+    var count = buffer.length/2;
+    var sum_squares = 0.0;
+    var shorts = []
+    for(var i=0;i<count;i++){
+    	shorts.push(buffer.readInt16LE(i*2));
+    }
+    for (var i=0;i<count;i++){
+        var n = shorts[i] * SHORT_NORMALIZE
+        sum_squares += n*n
+    }
+    return Math.sqrt( sum_squares / count )
+}
+/*
 var bot = new MegaPi("/dev/ttyS0", onStart);
 
 function onStart(){
@@ -32,20 +65,26 @@ function onStart(){
 function loop(){
 
   setTimeout(loop,500);
-}
-
-
-function startRecording(time){
-	lastTime = new Date().getTime();
-	var micStream = mic.startRecording();
-	micStream.pipe(recordVoiceStream);
-	setTimeout(stopRecording,time);
-}
+}*/
 
 function stopRecording(){
 	lastTime = new Date().getTime();
-	mic.stopRecording();
-	requestAuth('1267e760dd2748aa9165ae885e7d5729');
+	var count = list.length;
+	header.writeUInt32LE(count*list[0].length,4);
+	var buffer = new Buffer(count*list[0].length+44);
+	for(var i=0;i<44;i++){
+		buffer[i] = header[i];
+	}
+	for(var i=0;i<count;i++){
+		var len = list[i].length;	
+		for(var j=0;j<len;j++){
+			index = 44+len*i+j;
+			buffer[index] = list[i][j];
+		}
+	}
+	//fs.writeFileSync("./output.wav", new Buffer(buffer));
+	outputBuffer = buffer
+	requestAuth(apiKey);
 }
 function requestAuth(speechKey){
 	console.log("requestAuth");
@@ -72,7 +111,8 @@ function requestAuth(speechKey){
 	    });
 	});
 	authReq.on('error', (e) => {
-	  console.error(e);
+	  	console.error(e);
+		isRecognizing = false;
 	});
 	authReq.write("");
 	authReq.end();
@@ -113,13 +153,15 @@ function requestSpeech(authCode){
       		}
       		
 			console.log("time:"+Math.round((new Date().getTime()-lastTime)/1000));
+			isRecognizing = false;
 	    });
 	});
-	var wavBin = fs.readFileSync("./output.wav");
+	//var wavBin = fs.readFileSync("./output.wav");
 	speechReq.on('error', (e) => {
-	  console.error(e);
+	  	console.error(e);
+		isRecognizing = false;
 	});
-	speechReq.write(wavBin);
+	speechReq.write(outputBuffer);
 	speechReq.end();
 }
 				
