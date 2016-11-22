@@ -1,6 +1,6 @@
 var mic = require('microphone');
 const fs = require("fs");
-const WavEncoder = require("wav-encoder");
+
 var list = []; 
 var header;
 mic.startCapture();
@@ -20,7 +20,7 @@ setTimeout(function(){
 			buffer[index] = list[i][j];
 		}
 	}
-	fs.writeFileSync("noise.wav", new Buffer(buffer));
+	fs.writeFileSync("output.wav", new Buffer(buffer));
 },4000);
 mic.audioStream.on('data', function(data) {
 	if(data.length>44)
