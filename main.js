@@ -5,7 +5,7 @@ const guid = require('guid');
 const MegaPi = require("megapi").MegaPi;
 
 var mic = require('microphone');
-var apiKey = "your-bing-speech-api-key";
+var apiKey = "1267e760dd2748aa9165ae885e7d5729";
 var lastTime,header,isRecognizing = false,isRecording = false,list = [];
 var vol = 0;
 var outputBuffer;
