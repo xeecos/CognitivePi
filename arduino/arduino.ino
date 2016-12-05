@@ -106,7 +106,7 @@ void parseBuffer(){
 }
 void autoPump(){
   int t = analogRead(A13);
-  if(t>450&&_isPumpMode){
+  if(t>450||_isPumpMode){
     pump.run(80);
   }else{
     pump.stop();
