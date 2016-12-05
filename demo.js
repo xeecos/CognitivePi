@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 const exec = require('child_process').exec;
 const fs = require('fs');
 const https = require('https');
@@ -34,13 +33,20 @@ var sp = new SerialPort("/dev/ttyS0",{baudRate:115200},function(err){
     }
 });
 function turnOnFan(){
-    if(sp&&sp.isConnected()){
+    if(sp&&sp.isOpen()){
         sp.write(new Buffer("fan,1\n"));
     }
 }
 function turnOffFan(){
-    if(sp&&sp.isConnected()){
+    if(sp&&sp.isOpen()){
         sp.write(new Buffer("fan,0\n"));
+    }
+}
+function debug(msg){
+    if(sp&&sp.isOpen()){
+        sp.write(new Buffer("debug,"+msg+"\n"));
+    }else{
+        console.log("debug,"+msg);
     }
 }
 function listWiFi(callback){
@@ -102,88 +108,24 @@ function settingWifi(ssid,password){
     exec('reboot', (error, stdout, stderr) => {});
 }
 mic.startCapture();
-=======
-var mic = require('microphone');
-const fs = require("fs");
-<<<<<<< HEAD
-const WavEncoder = require("wav-encoder");
-
-var SHORT_NORMALIZE = 1.0/32768.0;
-=======
->>>>>>> 3a36c9a8afc459f4c2f938b942b4bd4c8f98cc1b
-
-var list = []; 
-var header;
-mic.startCapture();
-var list = [];
-setTimeout(function(){
-    mic.stopCapture();
-
-<<<<<<< HEAD
-    var count = list.length;
-	var data = new ArrayBuffer(count*list[0].length);
-	var bytes = new Uint8Array(data);
-    for(var i=0;i<count;i++){
-        var len = list[i].length
-        for(var j=0;j<len;j++){
-            bytes[i*len+j] = list[i][j];
-        }
-    }
-    var floats = new Float32Array(data);
-    
-    const recordWav = {
-        sampleRate: 8000,
-        channelData: [
-            floats,
-            floats
-        ]
-    };
-    WavEncoder.encode(recordWav).then((buffer) => {
-        fs.writeFileSync("noise.wav", new Buffer(buffer));
-    });
-},5000);
-mic.audioStream.on('data', function(data) {
-    list.push(data);
-    // var l = getRMS(data);
-    // if(l>1.32){
-    // console.log(l); 
-    // }
-=======
-setTimeout(function(){
-	mic.stopCapture();
-	var count = list.length;
-	header.writeUInt32LE(count*list[0].length,4);
-	var buffer = new Buffer(count*list[0].length+44);
-	for(var i=0;i<44;i++){
-		buffer[i] = header[i];
-	}
-	for(var i=0;i<count;i++){
-		var len = list[i].length;	
-		for(var j=0;j<len;j++){
-			index = 44+len*i+j;
-			buffer[index] = list[i][j];
-		}
-	}
-	fs.writeFileSync("output.wav", new Buffer(buffer));
-},4000);
->>>>>>> d1e8a9ea634d4f01bdc514e3c41c8252719cf5e4
 mic.audioStream.on('data', function(data) {
 	if(isRecognizing){
 		return;
 	}
 	if(data.length>44){
 		list.push(data);
-		if(list.length>20){
+		if(list.length>25){
 			list.shift();
 		}
-		var l = getRMS(data);
-		if(l>0.07){
+		var l = Math.round(getRMS(data)*100)/100;
+		if(l>0.2){
 			vol += l;
 		}else{
 			vol *= 0.5;
 		}
 		var v = Math.round(vol*100)/100;
-
+        //debug(l+" - "+v);
+        //return;
 		if(v>1&&!isRecording){
 			isRecording = true;
 			setTimeout(function(){
@@ -197,33 +139,22 @@ mic.audioStream.on('data', function(data) {
 		console.log(data.readUInt16LE(22));
 		console.log(data.readUInt32LE(24));
 	}
-<<<<<<< HEAD
 	
-=======
-    /*var l = getRMS(data);
-    if(l>0.02){
-    	console.log(l); 
-    }*/
->>>>>>> 3a36c9a8afc459f4c2f938b942b4bd4c8f98cc1b
->>>>>>> d1e8a9ea634d4f01bdc514e3c41c8252719cf5e4
 });
 
+var SHORT_NORMALIZE = (1.0/32768.0)
 function getRMS(buffer){
-    var count = buffer.length;
-	var data = new ArrayBuffer(count);
-	var bytes = new Uint8Array(data);
-	for(var i=0;i<count;i++){
-		bytes[i] = buffer[i];
-	}
-	var shorts = new Int16Array(data);
+    var count = buffer.length/2;
     var sum_squares = 0.0;
-    var s = "";
-    for(var i=0;i<shorts.length;i++){
-    	var b = shorts[i];
-    	var n = b * SHORT_NORMALIZE
+    var shorts = []
+    for(var i=0;i<count;i++){
+    	shorts.push(buffer.readInt16LE(i*2));
+    }
+    for (var i=0;i<count;i++){
+        var n = shorts[i] * SHORT_NORMALIZE
         sum_squares += n*n
     }
-    return Math.sqrt(sum_squares/count);
+    return Math.sqrt( sum_squares / count )
 }
 function stopRecording(){
 	lastTime = new Date().getTime();
@@ -241,8 +172,9 @@ function stopRecording(){
 		}
 	}
 	//fs.writeFileSync("./output.wav", new Buffer(buffer));
+    debug("requesting...");
 	outputBuffer = buffer
-	requestAuth('1267e760dd2748aa9165ae885e7d5729');
+	requestAuth("1267e760dd2748aa9165ae885e7d5729");
 }
 function requestAuth(speechKey){
 	console.log("requestAuth");
@@ -277,6 +209,7 @@ function requestAuth(speechKey){
 }
 function requestSpeech(authCode){
 	console.log("requestSpeech");
+    debug("recognizing...");
 	var post_params = {
 	    'version': '3.0',
 	    'requestid': guid.raw(), // changes each call
@@ -308,13 +241,17 @@ function requestSpeech(authCode){
 				result = JSON.parse(chunks);
                 if(result.header.name){
 		                console.log("result:",result.header.name);
+                        debug("result: "+result.header.name);
                         if(result.header.name.indexOf("off")>-1||result.header.name.indexOf("stop")>-1||result.header.name.indexOf("close")>-1){
                             turnOffFan();
                         }else if(result.header.name.indexOf("on")>-1||result.header.name.indexOf("start")>-1||result.header.name.indexOf("open")>-1){
                             turnOnFan();
                         }
+                }else{
+                        debug("result: failure!");
                 }
 			} catch (e) {
+                        debug("result: failure!");
       		}
       		
 			console.log("time:"+Math.round((new Date().getTime()-lastTime)/1000));
@@ -324,6 +261,7 @@ function requestSpeech(authCode){
 	//var wavBin = fs.readFileSync("./output.wav");
 	speechReq.on('error', (e) => {
 	  	console.error(e);
+        debug("result: failure!");
 		isRecognizing = false;
 	});
 	speechReq.write(outputBuffer);
