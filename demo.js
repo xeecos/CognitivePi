@@ -114,11 +114,11 @@ mic.audioStream.on('data', function(data) {
 	}
 	if(data.length>44){
 		list.push(data);
-		if(list.length>25){
+		if(list.length>40){
 			list.shift();
 		}
 		var l = Math.round(getRMS(data)*100)/100;
-		if(l>0.2){
+		if(l>0.1){
 			vol += l;
 		}else{
 			vol *= 0.5;
@@ -126,7 +126,7 @@ mic.audioStream.on('data', function(data) {
 		var v = Math.round(vol*100)/100;
         //debug(l+" - "+v);
         //return;
-		if(v>1&&!isRecording){
+		if(v>0.3&&!isRecording){
 			isRecording = true;
 			setTimeout(function(){
 				isRecording = false;
